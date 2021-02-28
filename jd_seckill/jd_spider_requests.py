@@ -11,6 +11,7 @@ import pickle
 import asyncio
 
 from lxml import etree
+import lxml.html
 from concurrent.futures import ProcessPoolExecutor
 
 from .jd_logger import logger
@@ -295,64 +296,65 @@ class JdTdudfp:
 
     async def _get(self):
         jd_tdudfp = None
-        try:
-            from pyppeteer import launch
-            url = "https://www.jd.com/"
-            browser = await launch(userDataDir=".user_data", autoClose=True,
-                                   args=['--start-maximized', '--no-sandbox', '--disable-setuid-sandbox'])
-            page = await browser.newPage()
-            # 有些页面打开慢，这里设置时间长一点，360秒
-            page.setDefaultNavigationTimeout(360 * 1000)
-            await page.setViewport({"width": 1920, "height": 1080})
-            await page.setUserAgent(self.user_agent)
-            for key, value in self.cookies.items():
-                await page.setCookie({"domain": ".jd.com", "name": key, "value": value})
-            await page.goto(url)
-            await page.waitFor(".nickname")
-            logger.info("page_title:【%s】, page_url【%s】" % (await page.title(), page.url))
+        # try:
+        #     from pyppeteer import launch
+        #     url = "https://www.jd.com/"
+        #     browser = await launch(userDataDir=".user_data", autoClose=True,
+        #                            args=['--start-maximized', '--no-sandbox', '--disable-setuid-sandbox'])
+        #     page = await browser.newPage()
+        #     # 有些页面打开慢，这里设置时间长一点，360秒
+        #     page.setDefaultNavigationTimeout(360 * 1000)
+        #     await page.setViewport({"width": 1920, "height": 1080})
+        #     await page.setUserAgent(self.user_agent)
+        #     for key, value in self.cookies.items():
+        #         await page.setCookie({"domain": ".jd.com", "name": key, "value": value})
+        #     await page.goto(url)
+        #     await page.waitFor(".nickname")
+        #     logger.info("page_title:【%s】, page_url【%s】" % (await page.title(), page.url))
 
-            nick_name = await page.querySelectorEval(".nickname", "(element) => element.textContent")
-            if not nick_name:
-                # 如果未获取到用户昵称，说明可能登陆失败，放弃获取 _JdTdudfp
-                return jd_tdudfp
+        #     nick_name = await page.querySelectorEval(".nickname", "(element) => element.textContent")
+        #     if not nick_name:
+        #         # 如果未获取到用户昵称，说明可能登陆失败，放弃获取 _JdTdudfp
+        #         return jd_tdudfp
 
-            await page.waitFor(".cate_menu_lk")
-            # .cate_menu_lk是一个a标签，理论上可以直接触发click事件
-            # 点击事件会打开一个新的tab页，但是browser.pages()无法获取新打开的tab页，导致无法引用新打开的page对象
-            # 所以获取href，使用goto跳转的方式
-            # 下面类似goto写法都是这个原因
-            a_href = await page.querySelectorAllEval(".cate_menu_lk", "(elements) => elements[0].href")
-            await page.goto(a_href)
-            await page.waitFor(".goods_item_link")
-            logger.info("page_title：【%s】, page_url：【%s】" % (await page.title(), page.url))
-            a_href = await page.querySelectorAllEval(".goods_item_link", "(elements) => elements[{}].href".format(str(random.randint(1,20))))
-            await page.goto(a_href)
-            await page.waitFor("#InitCartUrl")
-            logger.info("page_title：【%s】, page_url：【%s】" % (await page.title(), page.url))
-            a_href = await page.querySelectorAllEval("#InitCartUrl", "(elements) => elements[0].href")
-            await page.goto(a_href)
-            await page.waitFor(".btn-addtocart")
-            logger.info("page_title：【%s】, page_url：【%s】" % (await page.title(), page.url))
-            a_href = await page.querySelectorAllEval(".btn-addtocart", "(elements) => elements[0].href")
-            await page.goto(a_href)
-            await page.waitFor(".common-submit-btn")
-            logger.info("page_title：【%s】, page_url：【%s】" % (await page.title(), page.url))
+        #     await page.waitFor(".cate_menu_lk")
+        #     # .cate_menu_lk是一个a标签，理论上可以直接触发click事件
+        #     # 点击事件会打开一个新的tab页，但是browser.pages()无法获取新打开的tab页，导致无法引用新打开的page对象
+        #     # 所以获取href，使用goto跳转的方式
+        #     # 下面类似goto写法都是这个原因
+        #     a_href = await page.querySelectorAllEval(".cate_menu_lk", "(elements) => elements[0].href")
+        #     await page.goto(a_href)
+        #     await page.waitFor(".goods_item_link")
+        #     logger.info("page_title：【%s】, page_url：【%s】" % (await page.title(), page.url))
+        #     a_href = await page.querySelectorAllEval(".goods_item_link", "(elements) => elements[{}].href".format(str(random.randint(1,20))))
+        #     await page.goto(a_href)
+        #     await page.waitFor("#InitCartUrl")
+        #     logger.info("page_title：【%s】, page_url：【%s】" % (await page.title(), page.url))
+        #     a_href = await page.querySelectorAllEval("#InitCartUrl", "(elements) => elements[0].href")
+        #     await page.goto(a_href)
+        #     await page.waitFor(".btn-addtocart")
+        #     logger.info("page_title：【%s】, page_url：【%s】" % (await page.title(), page.url))
+        #     a_href = await page.querySelectorAllEval(".btn-addtocart", "(elements) => elements[0].href")
+        #     await page.goto(a_href)
+        #     await page.waitFor(".common-submit-btn")
+        #     logger.info("page_title：【%s】, page_url：【%s】" % (await page.title(), page.url))
             
-            await page.click(".common-submit-btn")
-            await page.waitFor("#sumPayPriceId")
-            logger.info("page_title：【%s】, page_url：【%s】" % (await page.title(), page.url))
+        #     await page.click(".common-submit-btn")
+        #     await page.waitFor("#sumPayPriceId")
+        #     logger.info("page_title：【%s】, page_url：【%s】" % (await page.title(), page.url))
 
-            for _ in range(30):
-                jd_tdudfp = await page.evaluate("() => {try{return _JdTdudfp}catch(e){}}")
-                if jd_tdudfp and len(jd_tdudfp) > 0:
-                    logger.info("jd_tdudfp：【%s】" % jd_tdudfp)
-                    break
-                else:
-                    await asyncio.sleep(1)
+        #     for _ in range(30):
+        #         jd_tdudfp = await page.evaluate("() => {try{return _JdTdudfp}catch(e){}}")
+        #         if jd_tdudfp and len(jd_tdudfp) > 0:
+        #             logger.info("jd_tdudfp：【%s】" % jd_tdudfp)
+        #             break
+        #         else:
+        #             await asyncio.sleep(1)
 
-            await page.close()
-        except Exception as e:
-            logger.info("自动获取JdTdudfp发生异常，将从配置文件读取！")
+        #     await page.close()
+        # except Exception as e:
+        #     logger.info("自动获取JdTdudfp发生异常，将从配置文件读取！")
+        logger.info("JdTdudfp将从配置文件读取！")
         return jd_tdudfp
 
 
@@ -366,7 +368,7 @@ class JdSeckill(object):
 
         # 初始化信息
         self.sku_id = global_config.getRaw('config', 'sku_id')
-        self.seckill_num = 2
+        self.seckill_num = 1
         self.seckill_init_info = dict()
         self.seckill_url = dict()
         self.seckill_order_data = dict()
@@ -546,10 +548,10 @@ class JdSeckill(object):
         """
         url = 'https://itemko.jd.com/itemShowBtn'
         payload = {
-            'callback': 'jQuery{}'.format(random.randint(1000000, 9999999)),
+            # 'callback': 'jQuery{}'.format(random.randint(1000000, 9999999)),
             'skuId': self.sku_id,
             'from': 'pc',
-            '_': str(int(time.time() * 1000)),
+            # '_': str(int(time.time() * 1000)),
         }
         headers = {
             'User-Agent': self.user_agent,
@@ -571,6 +573,19 @@ class JdSeckill(object):
             else:
                 logger.info("抢购链接获取失败，稍后自动重试")
                 wait_some_time()
+
+        # url = 'https://item.jd.com/{}.html'.format(self.sku_id)
+        # resp = self.session.get(url).text
+        # # with open('home.html', 'r') as f:
+        # #     x_data = lxml.html.fromstring(f.read())
+        # #     nodes = x_data.xpath('//body//a[@id="choose-btn-ko"]')
+        # #     print(nodes)
+
+        # x_data = lxml.html.fromstring(resp)
+        # nodes = x_data.xpath('//body//a[@id="choose-btn-ko"]/@href')
+        # if nodes:
+        #     print(nodes[0])
+
 
     def request_seckill_url(self):
         """访问商品的抢购链接（用于设置cookie等"""
